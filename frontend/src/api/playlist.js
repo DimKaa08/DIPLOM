@@ -15,3 +15,14 @@ export async function getPlaylistTracks(id, token) {
   });
   return res.data;
 }
+
+export async function removeTrackFromPlaylist(playlistId, trackId, token) {
+  const res = await axios.delete(
+    `${API}/playlists/${playlistId}/remove_track`,
+    {
+      params: { track_id: trackId },
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  );
+  return res.data;
+}

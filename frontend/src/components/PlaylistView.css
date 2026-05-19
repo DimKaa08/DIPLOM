@@ -1,0 +1,117 @@
+.playlist-view {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+  color: white;
+}
+
+.track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.track-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1e1e1e;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.track-item:hover {
+  background: #2a2a2a;
+}
+
+.track-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.track-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.track-artist {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.play-btn {
+  background: #4a8cff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
+
+.play-btn:hover {
+  background: #3a7be0;
+}
+
+.track-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1e1e1e;
+  padding: 12px;
+  border-radius: 8px;
+  gap: 12px;
+}
+
+.track-left {
+  flex: 1;
+  cursor: pointer;
+}
+
+.track-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.fav-btn {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #ccc;
+  padding: 6px;
+  border-radius: 6px;
+}
+
+.fav-btn.fav {
+  color: #ffd166;
+}
+
+.fav-btn:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.play-btn {
+  background: #4a8cff;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
+.play-btn:hover{
+    background: #3a7be0;
+}
+.delete-btn {
+  background: #ff4a4a;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background: #d93a3a;
+}
