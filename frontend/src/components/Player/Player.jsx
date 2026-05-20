@@ -1,35 +1,48 @@
-import { useContext, useEffect } from "react";
-import { PlayerContext } from "../../context/PlayerContext";
+import { useEffect, useRef, useState } from "react";
 import "./Player.css";
 
-
-export default function Player() {
-  const { audioRef, queue, currentIndex, nextTrack } = useContext(PlayerContext);
-
-  const current = queue[currentIndex];
+export default function Player({ track }) {
+  const audioRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
-    if (audioRef.current && current) {
-      audioRef.current.src = `http://localhost:8000/stream?track_id=${current.source_id}&source=${current.source}`;
+    if (!track || !track.url) return;
+
+    const audio = new Audio(track.url);
+    audioRef.current = audio;
+
+    audio.play();
+    setIsPlaying(true);
+
+    return () => {
+      audio.pause();
+    };
+  }, [track]);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
       audioRef.current.play();
+      setIsPlaying(true);
     }
-  }, [current]);
+  };
+
+  if (!track) return null;
 
   return (
     <div className="player">
-      <audio
-        ref={audioRef}
-        onEnded={nextTrack}
-        controls
-        style={{ width: "100%" }}
-      />
+      <div className="info">
+        <strong>{track.title}</strong>
+        <span>{track.artist}</span>
+      </div>
 
-      {current && (
-        <div className="track-info">
-          <h3>{current.title}</h3>
-          <p>{current.artist}</p>
-        </div>
-      )}
+      <button onClick={togglePlay}>
+        {isPlaying ? "⏸ Пауза" : "▶️ Играть"}
+      </button>
     </div>
   );
 }

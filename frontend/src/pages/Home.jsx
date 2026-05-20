@@ -4,7 +4,7 @@ import Player from "../components/Player/Player";
 import PlaylistView from "../components/PlaylistView";
 import SearchBar from "../components/SearchBar";
 import { AuthContext } from "../context/AuthContext";
-import { getPlaylistTracks } from "../api/playlists";
+import { getPlaylistTracks } from "../api/playlist";
 import { getRecommendations } from "../api/recommendations";
 
 export default function Home() {

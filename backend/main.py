@@ -23,7 +23,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/auth")
 app.include_router(search.router, prefix="/search")
 app.include_router(stream.router, prefix="/stream")
-app.include_router(playlist.router, prefix="/playlists")
+app.include_router(playlist.router, prefix="/playlist")
 app.include_router(favorites.router, prefix="/favorites")
 app.include_router(recommendations.router, prefix="/recommendations")
 

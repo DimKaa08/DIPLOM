@@ -3,7 +3,8 @@ import { PlayerContext } from "../context/PlayerContext";
 import { AuthContext } from "../context/AuthContext";
 
 import { addFavorite, removeFavorite, listFavorites } from "../api/favorites";
-import { removeTrackFromPlaylist } from "../api/playlists";
+import { removeTrackFromPlaylist } from "../api/playlist";
+import "./PlaylistView.css";
 
 export default function PlaylistView({ tracks, playlistId, onTracksUpdated }) {
   const { playTrack, setQueue } = useContext(PlayerContext);

@@ -1,39 +1,33 @@
 .player {
-  width: 100%;
-  padding: 16px;
-  background: #ffffff;
-  border-top: 1px solid #e5e5e5;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  position: sticky;
+  position: fixed;
   bottom: 0;
-  z-index: 50;
-  font-family: Inter, sans-serif;
-}
-
-.player audio {
+  left: 0;
   width: 100%;
-  outline: none;
+  background: #1e1e1e;
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+  z-index: 9999;
 }
 
-.track-info {
+.player .info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 4px;
 }
 
-.track-info h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #222;
+.player button {
+  background: #4a7cff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
 }
 
-.track-info p {
-  margin: 0;
-  font-size: 14px;
-  color: #666;
+.player button:hover {
+  background: #3a6ae6;
 }

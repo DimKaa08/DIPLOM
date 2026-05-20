@@ -16,12 +16,12 @@ spotify_plugin = SpotifyPlugin(client_id="006a93ddd0e341a3bc7ca85df7db6131", cli
 @router.get("/", response_model=List[TrackOut])
 def search_tracks(
     q: str = Query(..., description="Поисковый запрос"),
-    source: str = Query("youtube", description="Источник: youtube/soundcloud/spotify"),
+    source: str = Query("soundcloud", description="Источник: youtube/soundcloud/spotify"),
 ):
-    if source == "youtube":
-        return youtube_plugin.search(q)
-    elif source == "soundcloud":
+    if source == "soundcloud":
         return soundcloud_plugin.search(q)
+    elif source == "youtube":
+        return youtube_plugin.search(q)
     elif source == "spotify":
         return spotify_plugin.search(q)
     else:

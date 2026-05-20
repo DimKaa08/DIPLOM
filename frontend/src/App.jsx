@@ -1,8 +1,13 @@
 import { useState } from "react";
 import searchApi from "./api/search";
 import favoritesApi from "./api/favorites";
-import playlistApi from "./api/playlist";
-import axios from "axios";
+import playlistApi from "./api/playlist"; // пока не используем
+import "./App.css";
+import "./components/Player/Player.jsx";
+import "./components/PlaylistView.jsx";
+
+
+
 
 function App() {
   const [query, setQuery] = useState("");
@@ -15,8 +20,8 @@ function App() {
     if (!query.trim()) return;
 
     try {
-      const res = await searchApi.search(query);
-      setTracks(res.data);
+      const res = await searchApi.searchTracks(query); // res — уже массив
+      setTracks(res);
     } catch (err) {
       console.error("Search error:", err);
     }
@@ -28,15 +33,20 @@ function App() {
       const res = await fetch(
         `http://localhost:8000/stream/${track.id}?source=${track.source}`
       );
-      const data = await res.json();
+      const data = await res.json(); // ожидаем { url: "..." }
 
-      if (audio) audio.pause();
+      if (audio) {
+        audio.pause();
+      }
 
       const newAudio = new Audio(data.url);
-      newAudio.play();
+      await newAudio.play();
 
       setAudio(newAudio);
-      setCurrentTrack(track);
+      setCurrentTrack({
+        ...track,
+        url: data.url
+      });
     } catch (err) {
       console.error("Play error:", err);
     }
@@ -45,21 +55,25 @@ function App() {
   // ⭐ Добавить в избранное
   const addToFavorites = async (track) => {
     try {
-      await favoritesApi.add(track.id, track.source);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Нужна авторизация для избранного");
+        return;
+      }
+
+      await favoritesApi.addFavorite(track.id, token);
       alert("Добавлено в избранное");
     } catch (err) {
       console.error("Favorites error:", err);
     }
   };
 
-  // ➕ Добавить в плейлист
+  // ➕ Добавить в плейлист (пока заглушка, чтобы не ломать приложение)
   const addToPlaylist = async (track) => {
-    try {
-      await playlistApi.addTrack(1, track.id); // плейлист №1 для примера
-      alert("Добавлено в плейлист");
-    } catch (err) {
-      console.error("Playlist error:", err);
-    }
+    console.warn("addToPlaylist пока не реализован на backend");
+    alert("Добавление в плейлист пока не реализовано");
+    // когда появится endpoint:
+    // await playlistApi.addTrack(playlistId, track.id, token);
   };
 
   return (

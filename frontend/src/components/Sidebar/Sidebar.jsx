@@ -1,6 +1,6 @@
 import { useEffect, useState, useContext } from "react";
 import { AuthContext } from "../../context/AuthContext";
-import { getPlaylists } from "../../api/playlists";
+import { getPlaylists } from "../../api/playlist";
 
 export default function Sidebar({ onSelectPlaylist }) {
   const { token } = useContext(AuthContext);
