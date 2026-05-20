@@ -2,15 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
-from db.session import get_db
-from db import models
+from ..db.session import get_db
+from ..db import models
+#from auth import get_current_user   # ← добавили
 
 router = APIRouter()
-
-
-# TODO: заменить на реальную авторизацию
-def get_current_user_id() -> int:
-    return 1
 
 
 # ---------------------------------------------------------
@@ -26,7 +22,6 @@ def dummy_recommendations(db: Session, user_id: int, limit: int = 10) -> List[mo
     if not tracks:
         return []
 
-    # берём первые N треков (можно заменить на random.sample)
     return tracks[:limit]
 
 
@@ -37,12 +32,11 @@ def dummy_recommendations(db: Session, user_id: int, limit: int = 10) -> List[mo
 def get_user_recommendations(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: int = Depends(get_current_user_id)
+    #current_user: int = Depends(get_current_user)   # ← заменено
 ):
-    if user_id != current_user:
-        raise HTTPException(status_code=403, detail="Access denied")
+    #if user_id != current_user:
+    #    raise HTTPException(status_code=403, detail="Access denied")
 
-    # ищем плейлист рекомендаций
     playlist = (
         db.query(models.Playlist)
         .filter(
@@ -52,7 +46,6 @@ def get_user_recommendations(
         .first()
     )
 
-    # если нет — создаём
     if not playlist:
         playlist = models.Playlist(
             name="Рекомендации",
@@ -63,13 +56,10 @@ def get_user_recommendations(
         db.commit()
         db.refresh(playlist)
 
-    # получаем рекомендации (заглушка)
     recommended_tracks = dummy_recommendations(db, user_id)
 
-    # очищаем старые рекомендации
     playlist.tracks.clear()
 
-    # добавляем новые
     for track in recommended_tracks:
         playlist.tracks.append(track)
 

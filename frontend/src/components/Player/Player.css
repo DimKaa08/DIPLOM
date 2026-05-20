@@ -1,0 +1,39 @@
+.player {
+  width: 100%;
+  padding: 16px;
+  background: #ffffff;
+  border-top: 1px solid #e5e5e5;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
+  font-family: Inter, sans-serif;
+}
+
+.player audio {
+  width: 100%;
+  outline: none;
+}
+
+.track-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 4px;
+}
+
+.track-info h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #222;
+}
+
+.track-info p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}

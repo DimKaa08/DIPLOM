@@ -2,15 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from db.session import get_db
-from db import models
+from backend.db.session import get_db
+from backend.db import models
+#from auth import get_current_user
 
 router = APIRouter()
-
-
-# TODO: заменить на реальную авторизацию
-def get_current_user_id() -> int:
-    return 1
 
 
 # -----------------------------
@@ -20,12 +16,12 @@ def get_current_user_id() -> int:
 def create_playlist(
     name: str,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user_id)
+    #user_id: int = Depends(get_current_user)   # ← заменено
 ):
     playlist = models.Playlist(
         name=name,
         type="custom",
-        user_id=user_id
+        #user_id=user_id
     )
     db.add(playlist)
     db.commit()
@@ -39,11 +35,11 @@ def create_playlist(
 @router.get("/list")
 def list_playlists(
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user_id)
+    #user_id: int = Depends(get_current_user)   # ← заменено
 ):
     playlists = (
         db.query(models.Playlist)
-        .filter(models.Playlist.user_id == user_id)
+        #.filter(models.Playlist.user_id == user_id)
         .all()
     )
     return playlists
@@ -56,11 +52,11 @@ def list_playlists(
 def delete_playlist(
     playlist_id: int,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user_id)
+    #user_id: int = Depends(get_current_user)   # ← заменено
 ):
     playlist = (
         db.query(models.Playlist)
-        .filter(models.Playlist.id == playlist_id, models.Playlist.user_id == user_id)
+        .filter(models.Playlist.id == playlist_id)#, models.Playlist.user_id == user_id)
         .first()
     )
     if not playlist:
@@ -79,11 +75,11 @@ def add_track_to_playlist(
     playlist_id: int,
     track_id: int,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user_id)
+    #user_id: int = Depends(get_current_user)   # ← заменено
 ):
     playlist = (
         db.query(models.Playlist)
-        .filter(models.Playlist.id == playlist_id, models.Playlist.user_id == user_id)
+        .filter(models.Playlist.id == playlist_id)#, models.Playlist.user_id == user_id)
         .first()
     )
     if not playlist:
@@ -107,11 +103,11 @@ def remove_track_from_playlist(
     playlist_id: int,
     track_id: int,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user_id)
+    #user_id: int = Depends(get_current_user)   # ← заменено
 ):
     playlist = (
         db.query(models.Playlist)
-        .filter(models.Playlist.id == playlist_id, models.Playlist.user_id == user_id)
+        .filter(models.Playlist.id == playlist_id)#, models.Playlist.user_id == user_id)
         .first()
     )
     if not playlist:
@@ -135,11 +131,11 @@ def remove_track_from_playlist(
 def get_playlist_tracks(
     playlist_id: int,
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user_id)
+    #user_id: int = Depends(get_current_user)   # ← заменено
 ):
     playlist = (
         db.query(models.Playlist)
-        .filter(models.Playlist.id == playlist_id, models.Playlist.user_id == user_id)
+        .filter(models.Playlist.id == playlist_id)#, models.Playlist.user_id == user_id)
         .first()
     )
     if not playlist:
@@ -154,12 +150,12 @@ def get_playlist_tracks(
 @router.get("/recommendations")
 def get_recommendations_playlist(
     db: Session = Depends(get_db),
-    user_id: int = Depends(get_current_user_id)
+    #user_id: int = Depends(get_current_user)   # ← заменено
 ):
     playlist = (
         db.query(models.Playlist)
         .filter(
-            models.Playlist.user_id == user_id,
+            #models.Playlist.user_id == user_id,
             models.Playlist.type == "recommendations"
         )
         .first()
@@ -170,11 +166,10 @@ def get_recommendations_playlist(
         playlist = models.Playlist(
             name="Рекомендации",
             type="recommendations",
-            user_id=user_id
+            #user_id=user_id
         )
         db.add(playlist)
         db.commit()
         db.refresh(playlist)
 
-    # ⚠️ треки сюда добавляет ML-модуль (в recommendations.py)
     return playlist

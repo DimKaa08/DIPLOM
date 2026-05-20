@@ -1,5 +1,7 @@
 import { useContext, useEffect } from "react";
 import { PlayerContext } from "../../context/PlayerContext";
+import "./Player.css";
+
 
 export default function Player() {
   const { audioRef, queue, currentIndex, nextTrack } = useContext(PlayerContext);

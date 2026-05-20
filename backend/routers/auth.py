@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 
-from db.session import get_db
-from db import models
+from backend.db.session import get_db
+from backend.db import models
 
 router = APIRouter()
 

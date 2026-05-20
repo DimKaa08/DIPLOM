@@ -17,8 +17,16 @@ class BasePlugin(ABC):
 
     @abstractmethod
     def search(self, query: str) -> List[TrackOut]:
-        ...
+        """
+        Выполняет поиск треков по запросу.
+        Возвращает список объектов TrackOut.
+        """
+        raise NotImplementedError
 
     @abstractmethod
-    def get_stream_url(self, track_id: str) -> str:
-        ...
+    def get_stream_url(self, track_id: str) -> Optional[str]:
+        """
+        Возвращает прямой URL для стриминга аудио.
+        Если источник не поддерживает стрим — возвращает None.
+        """
+        raise NotImplementedError
