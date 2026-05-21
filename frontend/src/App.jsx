@@ -1,26 +1,25 @@
 import { useState } from "react";
 import searchApi from "./api/search";
 import favoritesApi from "./api/favorites";
-import playlistApi from "./api/playlist"; // пока не используем
+import playlistApi from "./api/playlist";
 import "./App.css";
-import "./components/Player/Player.jsx";
-import "./components/PlaylistView.jsx";
-
-
-
 
 function App() {
   const [query, setQuery] = useState("");
   const [tracks, setTracks] = useState([]);
   const [currentTrack, setCurrentTrack] = useState(null);
   const [audio, setAudio] = useState(null);
+  const [currentIndex, setCurrentIndex] = useState(null);
+  const [loop, setLoop] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   // 🔍 Поиск треков
   const handleSearch = async () => {
     if (!query.trim()) return;
 
     try {
-      const res = await searchApi.searchTracks(query); // res — уже массив
+      const res = await searchApi.searchTracks(query);
       setTracks(res);
     } catch (err) {
       console.error("Search error:", err);
@@ -28,28 +27,85 @@ function App() {
   };
 
   // ▶️ Проигрывание трека
-  const playTrack = async (track) => {
+  const playTrack = async (track, index) => {
     try {
+      if (currentTrack && currentTrack.id === track.id && audio) {
+        if (audio.paused) audio.play();
+        else audio.pause();
+        return;
+      }
+
       const res = await fetch(
         `http://localhost:8000/stream/${track.id}?source=${track.source}`
       );
-      const data = await res.json(); // ожидаем { url: "..." }
+      const data = await res.json();
 
-      if (audio) {
-        audio.pause();
-      }
+      if (audio) audio.pause();
 
       const newAudio = new Audio(data.url);
-      await newAudio.play();
+
+      newAudio.onloadedmetadata = () => {
+        setDuration(newAudio.duration || 0);
+      };
+
+      newAudio.ontimeupdate = () => {
+        setProgress(newAudio.currentTime || 0);
+      };
+
+      // ⭐ НАДЁЖНЫЙ АВТОПЕРЕХОД
+      newAudio.addEventListener("ended", () => {
+        if (loop) {
+          newAudio.currentTime = 0;
+          newAudio.play();
+        } else {
+          playNext();
+        }
+      });
+
+      newAudio.loop = loop;
+      newAudio.play();
 
       setAudio(newAudio);
-      setCurrentTrack({
-        ...track,
-        url: data.url
-      });
+      setCurrentTrack(track);
+      setCurrentIndex(index);
+
     } catch (err) {
       console.error("Play error:", err);
     }
+  };
+
+  // ⏭ Следующий трек
+  const playNext = () => {
+    if (currentIndex === null) return;
+
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < tracks.length) {
+      playTrack(tracks[nextIndex], nextIndex);
+    }
+  };
+
+  // ⏮ Предыдущий трек
+  const playPrev = () => {
+    if (currentIndex === null) return;
+
+    const prevIndex = currentIndex - 1;
+    if (prevIndex >= 0) {
+      playTrack(tracks[prevIndex], prevIndex);
+    }
+  };
+
+  // 🔁 Повтор трека
+  const toggleLoop = () => {
+    const newLoop = !loop;
+    setLoop(newLoop);
+    if (audio) audio.loop = newLoop;
+  };
+
+  // ⏩ Перемотка
+  const seek = (value) => {
+    if (!audio) return;
+    audio.currentTime = value;
+    setProgress(value);
   };
 
   // ⭐ Добавить в избранное
@@ -67,13 +123,15 @@ function App() {
       console.error("Favorites error:", err);
     }
   };
+  const loadRecommendations = async () => {
+    const res = await fetch(`http://localhost:8000/recommendations/${userId}`);
+    const data = await res.json();
+    setTracks(data);
+  };
 
-  // ➕ Добавить в плейлист (пока заглушка, чтобы не ломать приложение)
+  // ➕ Добавить в плейлист
   const addToPlaylist = async (track) => {
-    console.warn("addToPlaylist пока не реализован на backend");
     alert("Добавление в плейлист пока не реализовано");
-    // когда появится endpoint:
-    // await playlistApi.addTrack(playlistId, track.id, token);
   };
 
   return (
@@ -99,12 +157,49 @@ function App() {
           <p>
             {currentTrack.title} — {currentTrack.artist}
           </p>
+
+          {/* Прогресс и перемотка */}
+          <div style={{ marginTop: 15 }}>
+            <input
+              type="range"
+              min="0"
+              max={duration || 0}
+              value={progress}
+              onChange={(e) => seek(Number(e.target.value))}
+              style={{ width: "100%" }}
+            />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: 12,
+                marginTop: 4,
+              }}
+            >
+              <span>{Math.floor(progress)} сек</span>
+              <span>{Math.floor(duration)} сек</span>
+            </div>
+          </div>
+
+          {/* 🎛 Управление плеером */}
+          <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+            <button onClick={playPrev}>⏮ Предыдущий</button>
+            <button onClick={() => playTrack(currentTrack, currentIndex)}>
+              ⏯ Пауза / Играть
+            </button>
+            <button onClick={playNext}>⏭ Следующий</button>
+            <button onClick={toggleLoop}>
+              {loop ? "🔁 Повтор ВКЛ" : "🔁 Повтор ВЫКЛ"}
+            <button onClick={loadRecommendations}>🎵 Рекомендации</button>
+
+            </button>
+          </div>
         </div>
       )}
 
       {/* 🎵 Результаты поиска */}
       <div style={{ marginTop: 30 }}>
-        {tracks.map((track) => (
+        {tracks.map((track, index) => (
           <div
             key={track.id}
             style={{
@@ -122,7 +217,7 @@ function App() {
             </div>
 
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => playTrack(track)}>▶️ Play</button>
+              <button onClick={() => playTrack(track, index)}>▶️ Play</button>
               <button onClick={() => addToFavorites(track)}>⭐ Fav</button>
               <button onClick={() => addToPlaylist(track)}>➕ Playlist</button>
             </div>

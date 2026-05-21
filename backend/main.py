@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.routers import auth, search, stream, playlist, favorites, recommendations
 from backend.db.session import init_db
 
+
 app = FastAPI()
 
 origins = [

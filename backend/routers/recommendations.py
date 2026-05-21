@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
+
 from ..db.session import get_db
 from ..db import models
 #from auth import get_current_user   # ← добавили

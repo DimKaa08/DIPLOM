@@ -4,6 +4,7 @@ import "./Player.css";
 export default function Player({ track }) {
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  
 
   useEffect(() => {
     if (!track || !track.url) return;

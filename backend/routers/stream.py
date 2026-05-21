@@ -14,12 +14,15 @@ spotify = SpotifyPlugin(
 
 @router.get("/{track_id}")
 def get_stream(track_id: str, source: str = Query(...)):
-    if source == "youtube":
-        url = youtube.get_stream_url(track_id)
-    elif source == "soundcloud":
+    if source == "soundcloud":
         url = soundcloud.get_stream_url(track_id)
+
+    elif source == "youtube":
+        url = youtube.get_stream_url(track_id)
+
     elif source == "spotify":
         url = spotify.get_stream_url(track_id)
+
     else:
         raise HTTPException(status_code=400, detail="Unknown source")
 
