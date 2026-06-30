@@ -24,7 +24,7 @@ class SpotifyPlugin(BasePlugin):
         auth = base64.b64encode(f"{self.client_id}:{self.client_secret}".encode()).decode()
 
         r = requests.post(
-            "https://accounts.spotify.com/api/token",
+            "https://accounts.spotify.com/api/token", 
             headers={"Authorization": f"Basic {auth}"},
             data={"grant_type": "client_credentials"},
         )

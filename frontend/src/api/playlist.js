@@ -2,35 +2,33 @@ import axios from "axios";
 
 const API = "http://localhost:8000";
 
-// получить список плейлистов пользователя
 export async function getPlaylists(token) {
-  const res = await axios.get(`${API}/playlists/list`, {
+  const res = await axios.get(`${API}/playlist/list`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return res.data;
 }
 
-// получить треки конкретного плейлиста
 export async function getPlaylistTracks(id, token) {
-  const res = await axios.get(`${API}/playlists/${id}/tracks`, {
+  const res = await axios.get(`${API}/playlist/${id}/tracks`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return res.data;
 }
 
-// удалить трек из плейлиста
-export async function removeTrackFromPlaylist(playlistId, trackId, token) {
-  const res = await axios.delete(
-    `${API}/playlists/${playlistId}/remove_track`,
-    {
-      params: { track_id: trackId },
-      headers: { Authorization: `Bearer ${token}` }
+export const removeTrackFromPlaylist = async (playlistId, trackId, token) => {
+  const response = await axios.delete(`http://localhost:8000/playlist/${playlistId}/remove_track`, {
+    headers: { 
+      Authorization: `Bearer ${token}`
+    },
+    // Передаем как Query-параметр (?track_id=...)
+    params: {
+      track_id: String(trackId) // Превращаем ID в строку, как требует бэкенд!
     }
-  );
-  return res.data;
-}
+  });
+  return response.data;
+};
 
-// корректный default‑экспорт
 export default {
   getPlaylists,
   getPlaylistTracks,

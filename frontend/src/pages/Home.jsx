@@ -1,48 +1,147 @@
-import { useState, useContext } from "react";
+// src/pages/Home.jsx
+import axios from "axios"; 
+import { useState, useEffect, useContext } from "react";
 import Sidebar from "../components/Sidebar/Sidebar";
-import Player from "../components/Player/Player";
+import SearchBar from "../components/Search";
 import PlaylistView from "../components/PlaylistView";
-import SearchBar from "../components/SearchBar";
+import Player from "../components/Player/Player";
+
+import { getFavorites } from "../api/favorites";
 import { AuthContext } from "../context/AuthContext";
-import { getPlaylistTracks } from "../api/playlist";
-import { getRecommendations } from "../api/recommendations";
+import { PlayerContext } from "../context/PlayerContext";
 
 export default function Home() {
-  const { token, user } = useContext(AuthContext);
+  const { logout, user } = useContext(AuthContext);
+  const { queue, currentIndex } = useContext(PlayerContext);
+  
   const [tracks, setTracks] = useState([]);
-  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState("recommendations");
+  const [viewTitle, setViewTitle] = useState("Персональные рекомендации 🧠");
+  const [isRecommendations, setIsRecommendations] = useState(true);
 
-  const loadPlaylist = async (pl) => {
-    setSelectedPlaylist(pl);
+  useEffect(() => {
+    loadRecommendations();
+  }, []);
 
-    if (pl.id === "recommendations") {
-      const data = await getRecommendations(user.id, token);
-      setTracks(data.tracks);
-    } else {
-      const data = await getPlaylistTracks(pl.id, token);
-      setTracks(data);
+  const loadRecommendations = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      
+      const response = await axios.get("http://localhost:8000/playlist/recommendations", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const data = response.data;
+      setTracks(data && Array.isArray(data.tracks) ? data.tracks : []);
+      setViewTitle("Персональные рекомендации 🧠");
+      setIsRecommendations(true);
+      
+      if (data && data.id) {
+        setSelectedPlaylistId(data.id); 
+      }
+    } catch (error) {
+      console.error("Ошибка загрузки рекомендаций:", error);
     }
   };
 
+  const loadFavorites = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      
+      console.log("[Home] Загрузка любимых треков...");
+      const responseData = await getFavorites(token);
+      
+      console.log("[Home] Данные из бэкенда избранного:", responseData);
+
+      const rawTracks = Array.isArray(responseData) 
+        ? responseData 
+        : (responseData?.tracks || responseData?.items || []);
+
+      const flattenedTracks = rawTracks.map(item => {
+        if (item && item.track) {
+          return {
+            ...item.track,
+            source: item.track.source || item.source || "youtube", 
+            favorite_relation_id: item.id
+          };
+        }
+        
+        if (item && !item.source) {
+          return { ...item, source: "youtube" };
+        }
+        
+        return item;
+      });
+
+      console.log("[Home] Итоговые плоские треки для плеера:", flattenedTracks);
+      
+      setTracks(flattenedTracks);
+      setViewTitle("Моё Избранное ⭐");
+      setIsRecommendations(false);
+      setSelectedPlaylistId("favorites"); 
+    } catch (err) {
+      console.error("Ошибка загрузки избранного:", err);
+    }
+  };
+
+  const handleSelectPlaylist = async (playlistKey) => {
+    console.log("[Sidebar Click] Кликнули по:", playlistKey);
+    
+    if (playlistKey.id === "recommendations") {
+      await loadRecommendations();
+    } else if (playlistKey.id === "favorites") {
+      await loadFavorites();
+    } else {
+      setIsRecommendations(false);
+      setSelectedPlaylistId(playlistKey.id);
+    }
+  };
+
+  const handleSearchResults = (results) => {
+    setTracks(Array.isArray(results) ? results : []);
+    setViewTitle("Результаты поиска");
+    setIsRecommendations(false);
+    setSelectedPlaylistId(null); 
+  };
+
+  const getRefreshHandler = () => {
+    if (isRecommendations) return loadRecommendations;
+    if (selectedPlaylistId === "favorites") return loadFavorites;
+    return null;
+  };
+
+  const currentTrack = queue[currentIndex] || null;
+
   return (
-    <div className="home">
-      <Sidebar onSelectPlaylist={loadPlaylist} />
+    <div className="app-layout">
+      <header className="app-header">
+        <div className="logo-section">
+          <h1>Music Platform</h1>
+          {user && <span className="user-badge">👤 {user.email}</span>}
+        </div>
+        <button onClick={logout} className="logout-btn">Выйти</button>
+      </header>
 
-      <div className="content">
-        <SearchBar onResults={(res) => {
-          setSelectedPlaylist(null);
-          setTracks(res);
-        }} />
-
-        <PlaylistView
-          tracks={tracks}
-          playlistId={selectedPlaylist?.id}
-          onTracksUpdated={setTracks}
-        />
+      <div className="main-container">
+        <Sidebar onSelectPlaylist={handleSelectPlaylist} />
+        
+        <main className="content-area">
+          <SearchBar onResults={handleSearchResults} />
+          
+          <h2 className="view-title">{viewTitle}</h2>
+          
+          <PlaylistView 
+            tracks={tracks} 
+            playlistId={isRecommendations ? "recommendations" : selectedPlaylistId} 
+            onTracksUpdated={setTracks} 
+            onRefresh={getRefreshHandler()}
+          />
+        </main>
       </div>
 
-      <Player />
+      {currentTrack && <Player track={currentTrack} />}
     </div>
   );
 }
-

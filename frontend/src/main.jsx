@@ -1,20 +1,20 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
-import "./App.css";
-
-import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.jsx";
-import { PlayerProvider } from "./context/PlayerContext.jsx";
+import { PlayerProvider } from "./context/PlayerContext.jsx"; // 1. Импортируем провайдер плеера
+import { BrowserRouter } from "react-router-dom";
+import "./index.css"; 
+import "./App.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <AuthProvider>
-      <PlayerProvider>
-        <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <PlayerProvider> {/* 2. Оборачиваем App, чтобы контекст плеера был доступен в Home */}
           <App />
-        </BrowserRouter>
-      </PlayerProvider>
-    </AuthProvider>
+        </PlayerProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );

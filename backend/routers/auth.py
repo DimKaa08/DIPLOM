@@ -1,3 +1,5 @@
+import token
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -7,8 +9,11 @@ from passlib.context import CryptContext
 
 from backend.db.session import get_db
 from backend.db import models
+from pydantic import BaseModel
 
-router = APIRouter()
+
+
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # ---------------------------------------------------------
 # JWT настройки
@@ -17,9 +22,10 @@ SECRET_KEY = "super_secret_key_change_me"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 часа
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+
 
 
 # ---------------------------------------------------------
@@ -45,13 +51,12 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 # ---------------------------------------------------------
 # Получить текущего пользователя по токену
 # ---------------------------------------------------------
-def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-) -> models.User:
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.User:
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
+        user_id = payload.get("sub")
 
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
@@ -70,12 +75,17 @@ def get_current_user(
 # ---------------------------------------------------------
 # 📌 Регистрация
 # ---------------------------------------------------------
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+
+
 @router.post("/register")
-def register(
-    email: str,
-    password: str,
-    db: Session = Depends(get_db)
-):
+def register(data: RegisterRequest, db: Session = Depends(get_db)):
+    email = data.email
+    password = data.password
+
     existing = db.query(models.User).filter(models.User.email == email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -95,17 +105,22 @@ def register(
 # ---------------------------------------------------------
 # 📌 Логин (OAuth2PasswordRequestForm)
 # ---------------------------------------------------------
-@router.post("/login")
-def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
-):
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+class LoginRequest(BaseModel):
+    email: str
+    password: str
 
-    if not user or not verify_password(form_data.password, user.password_hash):
+@router.post("/login")
+def login(data: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == data.email).first()
+
+    if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_access_token({"sub": str(user.id)})
+    token = jwt.encode(
+        {"sub": str(user.id)},
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )
 
     return {
         "access_token": token,

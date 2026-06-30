@@ -2,23 +2,30 @@ import axios from "axios";
 
 const API = "http://localhost:8000";
 
-export async function getPlaylists(token) {
-  const res = await axios.get(`${API}/playlists/list`, {
+export async function getRecommendations(token) {
+  const res = await axios.get(`${API}/recommendations`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return res.data;
 }
 
-export async function getPlaylistTracks(id, token) {
-  const res = await axios.get(`${API}/playlists/${id}/tracks`, {
+export async function replaceTrackInQueue(trackId, currentQueue, token) {
+  const res = await axios.post(`${API}/recommendations/replace`, {
+    track_id: String(trackId),
+    current_queue: currentQueue.map(String)
+  }, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return res.data;
 }
 
-export async function getRecommendations(user_id, token) {
-  const res = await axios.get(`${API}/recommendations/user/${user_id}`, {
+// Новая функция для полного удаления трека из рекомендаций навсегда
+export async function hideTrackFromRecommendations(trackId, token) {
+  // Отправляем пустой объект {} в качестве body, так как ID передается в URL параметре
+  const res = await axios.post(`${API}/recommendations/hide/${trackId}`, {}, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return res.data;
 }
+
+export default { getRecommendations, replaceTrackInQueue, hideTrackFromRecommendations };

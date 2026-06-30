@@ -1,17 +1,15 @@
-import axios from "axios";
+import axios from 'axios';
 
-const API = "http://localhost:8000";
+export const searchTracks = async (query) => {
+  // Достаем токен, который вы сохранили в LocalStorage при авторизации
+  const token = localStorage.getItem('token'); 
 
-// основной метод поиска
-export async function searchTracks(query, source = "youtube") {
-  const res = await axios.get(`${API}/search`, {
-    params: { q: query, source }
+  const response = await axios.get(`http://127.0.0.1:8000/search`, {
+    params: { q: query },
+    headers: {
+      // Ключевое слово Bearer и пробел после него обязательны!
+      Authorization: `Bearer ${token}` 
+    }
   });
-  return res.data;
-}
-
-// default‑экспорт, чтобы App.jsx мог делать import searchApi from ...
-export default {
-  searchTracks
+  return response.data;
 };
-

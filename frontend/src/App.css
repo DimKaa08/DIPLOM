@@ -1,26 +1,86 @@
-body {
-  font-family: Arial, sans-serif;
-  background: #f7f7f7;
-  margin: 0;
-  padding: 0;
-}
-
-button {
-  cursor: pointer;
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: none;
-  background: #4a7cff;
+/* Главный контейнер на весь экран */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background: #121212; /* Фирменный темный цвет */
   color: white;
+  overflow: hidden;
+}
+
+/* Шапка проекта */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #282828;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.logo-section h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.user-badge {
   font-size: 14px;
-  transition: 0.2s;
+  color: #b3b3b3;
+  background: #282828;
+  padding: 4px 12px;
+  border-radius: 20px;
 }
 
-button:hover {
-  background: #3a6ae6;
+.logout-btn {
+  background: #e74c3c !important;
 }
 
-input {
-  border: 1px solid #ccc;
+/* Контейнер для сайдбара и контента */
+.main-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden; /* Важно, чтобы прокручивался только контент */
+}
+
+/* Стилизуем боковую панель */
+.sidebar {
+  width: 240px;
+  background: #000000;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  border-right: 1px solid #282828;
+}
+
+.playlist-item {
+  padding: 10px 12px;
   border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+  color: #b3b3b3;
+}
+
+.playlist-item:hover {
+  background: #282828;
+  color: white;
+}
+
+/* Правая контентная область */
+.content-area {
+  flex: 1;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  overflow-y: auto; /* Скролл только здесь */
+  background: linear-gradient(to bottom, #1e1e1e, #121212);
+  padding-bottom: 100px; /* Отступ внизу, чтобы плеер не перекрывал треки */
 }

@@ -2,18 +2,33 @@ import axios from "axios";
 
 const API = "http://localhost:8000";
 
-export async function login(email, password) {
-  const form = new FormData();
-  form.append("username", email);
-  form.append("password", password);
-
-  const res = await axios.post(`${API}/auth/login`, form);
-  return res.data;
-}
-
 export async function register(email, password) {
-  const res = await axios.post(`${API}/auth/register`, null, {
-    params: { email, password }
+  const res = await fetch("http://localhost:8000/auth/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
   });
-  return res.data;
+
+  if (!res.ok) throw new Error("Register failed");
+  return await res.json();
 }
+
+
+export async function login(email, password) {
+  const res = await fetch("http://localhost:8000/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Login failed");
+  }
+
+  return await res.json();
+}
+

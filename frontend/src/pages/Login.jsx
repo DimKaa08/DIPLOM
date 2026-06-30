@@ -15,6 +15,8 @@ export default function Login() {
 
     try {
       const data = await login(email, password);
+
+      // сохраняем токен и пользователя
       setToken(data.access_token);
       setUser({ id: data.user_id, email });
 

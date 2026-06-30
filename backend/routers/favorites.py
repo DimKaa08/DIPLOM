@@ -1,55 +1,126 @@
-from fastapi import APIRouter, Depends, HTTPException
+# backend/routers/favorites.py
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from pydantic import BaseModel
 
-from ..db.session import get_db
-from ..db import models
-#from auth import get_current_user
+from backend.db.session import get_db
+from backend.db import models
+from backend.routers.auth import get_current_user
+from backend.services.event_logger import EventLogger
 
-router = APIRouter()
+# Предполагается, что в main.py этот роутер подключается с prefix="/favorites"
+router = APIRouter(prefix="/favorites", tags=["Favorites"])
+
+class FavoriteRequest(BaseModel):
+    track_id: str  
+    title: str
+    artist: str
+
+class TrackSchema(BaseModel):
+    id: str
+    title: str
+    artist: str
+    youtube_url: str | None = None
+
+    class Config:
+        from_attributes = True
 
 
+# 📌 1. Добавление в избранное
 @router.post("/add")
 def add_favorite(
-    track_id: int,
+    data: FavoriteRequest, 
     db: Session = Depends(get_db),
-    #user_id: int = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user)
 ):
-    track = db.query(models.Track).filter(models.Track.id == track_id).first()
+    track = db.query(models.Track).filter(models.Track.source_id == data.track_id).first()
+    
     if not track:
-        raise HTTPException(status_code=404, detail="Track not found")
+        track = models.Track(
+            source="youtube",
+            source_id=data.track_id,
+            title=data.title,
+            artist=data.artist
+        )
+        db.add(track)
+        db.commit()
+        db.refresh(track)
 
-    #fav = models.Favorite(user_id=user_id, track_id=track_id)
-    #db.add(fav)
-    #db.commit()
-    #db.refresh(fav)
-    return {"status": "ok", "favorite_id": None}
-
-
-@router.delete("/remove")
-def remove_favorite(
-    track_id: int,
-    db: Session = Depends(get_db),
-    #user_id: int = Depends(get_current_user)
-):
-    fav = (
+    existing = (
         db.query(models.Favorite)
-        #.filter(models.Favorite.user_id == user_id, models.Favorite.track_id == track_id)
+        .filter(
+            models.Favorite.user_id == current_user.id,
+            models.Favorite.track_id == track.id
+        )
         .first()
     )
-    if not fav:
-        raise HTTPException(status_code=404, detail="Favorite not found")
+    if existing:
+        return {"status": "already_exists", "favorite_id": existing.id}
 
-    db.delete(fav)
+    fav = models.Favorite(user_id=current_user.id, track_id=track.id)
+    db.add(fav)
     db.commit()
-    return {"status": "ok"}
+    db.refresh(fav)
+
+    EventLogger.log(db, current_user.id, data.track_id, "favorite")
+    return {"status": "ok", "favorite_id": fav.id}
 
 
-@router.get("/list", response_model=List[int])
-def list_favorites(
+# 📌 2. Получение плейлиста "Избранное"
+@router.get("")
+def get_favorites(
     db: Session = Depends(get_db),
-    #user_id: int = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user)
 ):
-    #favs = db.query(models.Favorite).filter(models.Favorite.user_id == user_id).all()
-    #return [f.track_id for f in favs]
-    return []
+    favorite_tracks = (
+        db.query(models.Track)
+        .join(models.Favorite, models.Track.id == models.Favorite.track_id)
+        .filter(models.Favorite.user_id == current_user.id)
+        .all()
+    )
+    
+    result = []
+    for t in favorite_tracks:
+        result.append({
+            "id": t.source_id,  
+            "title": t.title,
+            "artist": t.artist,
+            "youtube_url": f"https://www.youtube.com/watch?v={t.source_id}"
+        })
+    return result
+
+
+# 📌 3. Удаление из избранного (ИСПРАВЛЕНО: Безопасное удаление без 404 ошибки)
+@router.delete("/remove/{track_id}")
+def remove_favorite(
+    track_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    # Ищем трек в глобальной таблице треков
+    track = db.query(models.Track).filter(models.Track.source_id == track_id).first()
+    
+    # Если трека нет в базе данных, значит его точно нет и в избранном пользователя
+    if not track:
+        return {"status": "ok", "message": "Трека не было в избранном"}
+
+    # Ищем связь в избранном
+    fav = (
+        db.query(models.Favorite)
+        .filter(
+            models.Favorite.user_id == current_user.id,
+            models.Favorite.track_id == track.id
+        )
+        .first()
+    )
+    
+    # Если связь найдена — удаляем её
+    if fav:
+        db.delete(fav)
+        db.commit()
+        # Логируем обратное действие для аналитики ML системы
+        EventLogger.log(db, current_user.id, track_id, "unfavorite")
+        return {"status": "ok", "message": "Успешно удалено из избранного"}
+    
+    return {"status": "ok", "message": "Трек уже удален из избранного"}
