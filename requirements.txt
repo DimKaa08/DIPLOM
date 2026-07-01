@@ -1,0 +1,33 @@
+# Web framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# Database
+sqlalchemy==2.0.35
+
+# Auth
+python-jose[cryptography]==3.3.0
+passlib[argon2]==1.7.4
+
+# Validation & settings
+pydantic==2.9.2
+python-dotenv==1.0.1
+
+# HTTP
+requests==2.32.3
+
+# Music sources
+yt-dlp==2024.9.27
+
+# ML
+torch==2.4.1
+# CPU-only версия — значительно легче для сервера без GPU.
+# Если есть GPU, замените на: torch==2.4.1+cu121
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# Celery + Redis
+celery==5.4.0
+redis==5.1.1
+
+# Celery web UI (опционально, для мониторинга очереди)
+flower==2.0.1

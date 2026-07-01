@@ -23,6 +23,7 @@ class TrackLogIn(BaseModel):
     skip_type: str  # 'immediate', 'partial', 'none'
 
 
+# backend/routers/events.py — стало
 @router.post("/log")
 def log_track_interaction(
     payload: TrackLogIn,
@@ -31,31 +32,42 @@ def log_track_interaction(
 ):
     print(f"[AI Engine] Лог от юзера {current_user.id} на трек #{payload.track_id}")
 
-    # 1. Находим трек в базе, чтобы вытащить его Жанр и Артиста
-    track = db.query(models.Track).filter(models.Track.id == payload.track_id).first()
-    if not track:
-        raise HTTPException(status_code=404, detail="Трек не найден в базе данных")
+    # ✅ Ищем по source_id — это строковый внешний ID ("dQw4w9WgXcQ")
+    track = db.query(models.Track).filter(
+        models.Track.source_id == payload.track_id
+    ).first()
 
-    # 2. Алгоритм расчета веса (Engagement Score) на бэкенде
+    # Если трека ещё нет в БД — создаём его на лету
+    # (такое бывает при первом прослушивании до добавления в избранное)
+    if not track:
+        track = models.Track(
+            source_id=payload.track_id,
+            source="youtube" if len(payload.track_id) == 11 else "soundcloud",
+            title="Unknown",
+            artist="Unknown"
+        )
+        db.add(track)
+        db.flush()  # flush, не commit — получаем track.id без закрытия транзакции
+
+    # Теперь track.id — это корректный Integer для FK в UserInteraction
     score = 0.0
     if payload.is_finished:
-        score += 2.0  # Дослушал до конца — отлично
+        score += 2.0
     if payload.is_looped:
-        score += 3.0  # Поставил на репит — супер-лайк
-        
+        score += 3.0
+
     if payload.was_skipped:
         if payload.skip_type == "immediate":
-            score -= 2.0  # Скипнул сразу же (<10 сек) — трек не нравится
+            score -= 2.0
         elif payload.skip_type == "partial":
-            score -= 0.5  # Немного послушал и скипнул — нейтрально-негативно
+            score -= 0.5
 
-    # Добавляем удержание в коэффицент (от 0.0 до 1.5 очков)
     score += (payload.completion_rate * 1.5)
 
-    # 3. Сохраняем это конкретное прослушивание в лог для датасета ИИ
+    # ✅ track.id — Integer FK, всё совпадает с моделью
     new_interaction = models.UserInteraction(
         user_id=current_user.id,
-        track_id=payload.track_id,
+        track_id=track.id,          # ← Integer PK, не строка
         listen_duration=payload.listen_duration,
         completion_rate=payload.completion_rate,
         is_finished=payload.is_finished,
@@ -67,36 +79,37 @@ def log_track_interaction(
     )
     db.add(new_interaction)
 
-    # 4. Обновляем кумулятивный профиль вкусов юзера (UserPreference) для быстрого поиска
-    pref = db.query(models.UserPreference).filter(models.UserPreference.user_id == current_user.id).first()
+    # Обновляем профиль вкусов пользователя
+    pref = db.query(models.UserPreference).filter(
+        models.UserPreference.user_id == current_user.id
+    ).first()
     if not pref:
-        pref = models.UserPreference(user_id=current_user.id, preferred_genres={}, preferred_artists={})
+        pref = models.UserPreference(
+            user_id=current_user.id,
+            preferred_genres={},
+            preferred_artists={}
+        )
         db.add(pref)
 
-    # Загружаем текущие веса из JSONB (делаем копии, так как SQLAlchemy капризна к мутациям dict)
-    genres_map = dict(pref.preferred_genres)
+    genres_map  = dict(pref.preferred_genres)
     artists_map = dict(pref.preferred_artists)
 
-    # Плюсуем/минусуем очки жанру трека
     if track.genre:
         genres_map[track.genre] = round(genres_map.get(track.genre, 0.0) + score, 2)
-        
-    # Плюсуем/минусуем очки исполнителю трека
-    if track.artist:
+    if track.artist and track.artist != "Unknown":
         artists_map[track.artist] = round(artists_map.get(track.artist, 0.0) + score, 2)
 
-    # Сохраняем обновленные карты весов обратно в модель
-    pref.preferred_genres = genres_map
+    pref.preferred_genres  = genres_map
     pref.preferred_artists = artists_map
 
-    # Корректируем средний порог терпения юзера при скипах
     if payload.was_skipped and payload.skip_position:
         pref.skip_threshold = round((pref.skip_threshold + payload.skip_position) / 2, 1)
 
     db.commit()
-    
+
     return {
-        "status": "success", 
-        "message": "Данные собраны, профиль ИИ обновлен", 
+        "status": "success",
+        "message": "Данные собраны, профиль ИИ обновлён",
         "calculated_score": round(score, 2)
     }
+   

@@ -1,34 +1,12 @@
-import axios from "axios";
-
-const API = "http://localhost:8000";
+// frontend/src/api/auth.js
+import client from "./client";
 
 export async function register(email, password) {
-  const res = await fetch("http://localhost:8000/auth/register", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email, password }),
-  });
-
-  if (!res.ok) throw new Error("Register failed");
-  return await res.json();
+  const res = await client.post("/auth/register", { email, password });
+  return res.data;
 }
-
 
 export async function login(email, password) {
-  const res = await fetch("http://localhost:8000/auth/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email, password }),
-  });
-
-  if (!res.ok) {
-    throw new Error("Login failed");
-  }
-
-  return await res.json();
+  const res = await client.post("/auth/login", { email, password });
+  return res.data;
 }
-

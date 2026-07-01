@@ -2,10 +2,13 @@
 import base64
 import time
 import requests
+import os
+from dotenv import load_dotenv
 
-# ⚠️ Вставьте сюда ваши данные из панели https://soundcloud.com/you/apps
-CLIENT_ID = "fiuzE85k3o4UWMYgDJCeS1RwwsSINyOT"
-CLIENT_SECRET = "EbbqTaPWFPkLXts90DPr84EnwewdhZcu"
+load_dotenv()
+
+CLIENT_ID = os.getenv("SOUNDCLOUD_CLIENT_ID")
+CLIENT_SECRET = os.getenv("SOUNDCLOUD_CLIENT_SECRET")
 
 # Внутреннее кэширование токена в памяти
 _cached_token = None

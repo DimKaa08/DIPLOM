@@ -1,5 +1,6 @@
 import token
-
+import os
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -15,12 +16,16 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-# ---------------------------------------------------------
-# JWT настройки
-# ---------------------------------------------------------
-SECRET_KEY = "super_secret_key_change_me"
+
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY не задан! Создай .env файл с SECRET_KEY=...")
+
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 часа
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
 
@@ -112,22 +117,17 @@ class LoginRequest(BaseModel):
 @router.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.email == data.email).first()
-
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = jwt.encode(
-        {"sub": str(user.id)},
-        SECRET_KEY,
-        algorithm=ALGORITHM
+    # было: jwt.encode({"sub": str(user.id)}, SECRET_KEY, ...)
+    # стало: через create_access_token с нормальным временем жизни
+    token = create_access_token(
+        data={"sub": str(user.id)},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "user_id": user.id
-    }
-
+    return {"access_token": token, "token_type": "bearer", "user_id": user.id}
 
 # ---------------------------------------------------------
 # 📌 Проверка токена

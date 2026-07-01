@@ -1,36 +1,21 @@
-import axios from "axios";
+// frontend/src/api/playlist.js
+import client from "./client";
 
-const API = "http://localhost:8000";
-
-export async function getPlaylists(token) {
-  const res = await axios.get(`${API}/playlist/list`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+export async function getPlaylists() {
+  const res = await client.get("/playlist/list");
   return res.data;
 }
 
-export async function getPlaylistTracks(id, token) {
-  const res = await axios.get(`${API}/playlist/${id}/tracks`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+export async function getPlaylistTracks(id) {
+  const res = await client.get(`/playlist/${id}/tracks`);
   return res.data;
 }
 
-export const removeTrackFromPlaylist = async (playlistId, trackId, token) => {
-  const response = await axios.delete(`http://localhost:8000/playlist/${playlistId}/remove_track`, {
-    headers: { 
-      Authorization: `Bearer ${token}`
-    },
-    // Передаем как Query-параметр (?track_id=...)
-    params: {
-      track_id: String(trackId) // Превращаем ID в строку, как требует бэкенд!
-    }
+export const removeTrackFromPlaylist = async (playlistId, trackId) => {
+  const res = await client.delete(`/playlist/${playlistId}/remove_track`, {
+    params: { track_id: String(trackId) },
   });
-  return response.data;
+  return res.data;
 };
 
-export default {
-  getPlaylists,
-  getPlaylistTracks,
-  removeTrackFromPlaylist
-};
+export default { getPlaylists, getPlaylistTracks, removeTrackFromPlaylist };

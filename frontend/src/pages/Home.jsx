@@ -1,94 +1,63 @@
-// src/pages/Home.jsx
-import axios from "axios"; 
+// frontend/src/pages/Home.jsx
 import { useState, useEffect, useContext } from "react";
+import client from "../api/client";
+import { getFavorites } from "../api/favorites";
+import { AuthContext } from "../context/AuthContext";
+import { PlayerContext } from "../context/PlayerContext";
 import Sidebar from "../components/Sidebar/Sidebar";
 import SearchBar from "../components/Search";
 import PlaylistView from "../components/PlaylistView";
 import Player from "../components/Player/Player";
 
-import { getFavorites } from "../api/favorites";
-import { AuthContext } from "../context/AuthContext";
-import { PlayerContext } from "../context/PlayerContext";
-
 export default function Home() {
-  const { logout, user } = useContext(AuthContext);
-  const { queue, currentIndex } = useContext(PlayerContext);
-  
-  const [tracks, setTracks] = useState([]);
+  const { logout, user }          = useContext(AuthContext);
+  const { queue, currentIndex }   = useContext(PlayerContext);
+
+  const [tracks, setTracks]                       = useState([]);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState("recommendations");
-  const [viewTitle, setViewTitle] = useState("Персональные рекомендации 🧠");
+  const [viewTitle, setViewTitle]                 = useState("Персональные рекомендации 🧠");
   const [isRecommendations, setIsRecommendations] = useState(true);
 
-  useEffect(() => {
-    loadRecommendations();
-  }, []);
+  useEffect(() => { loadRecommendations(); }, []);
 
   const loadRecommendations = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      
-      const response = await axios.get("http://localhost:8000/playlist/recommendations", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      const data = response.data;
-      setTracks(data && Array.isArray(data.tracks) ? data.tracks : []);
+      // client.js добавляет baseURL и токен — никакого хардкода
+      const { data } = await client.get("/playlist/recommendations");
+      setTracks(data?.tracks && Array.isArray(data.tracks) ? data.tracks : []);
       setViewTitle("Персональные рекомендации 🧠");
       setIsRecommendations(true);
-      
-      if (data && data.id) {
-        setSelectedPlaylistId(data.id); 
-      }
+      if (data?.id) setSelectedPlaylistId(data.id);
     } catch (error) {
-      console.error("Ошибка загрузки рекомендаций:", error);
+      console.error("[Home] Ошибка загрузки рекомендаций:", error);
     }
   };
 
   const loadFavorites = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      
-      console.log("[Home] Загрузка любимых треков...");
-      const responseData = await getFavorites(token);
-      
-      console.log("[Home] Данные из бэкенда избранного:", responseData);
+      const responseData = await getFavorites();
 
-      const rawTracks = Array.isArray(responseData) 
-        ? responseData 
+      const rawTracks = Array.isArray(responseData)
+        ? responseData
         : (responseData?.tracks || responseData?.items || []);
 
-      const flattenedTracks = rawTracks.map(item => {
-        if (item && item.track) {
-          return {
-            ...item.track,
-            source: item.track.source || item.source || "youtube", 
-            favorite_relation_id: item.id
-          };
+      const flattenedTracks = rawTracks.map((item) => {
+        if (item?.track) {
+          return { ...item.track, source: item.track.source || "youtube", favorite_relation_id: item.id };
         }
-        
-        if (item && !item.source) {
-          return { ...item, source: "youtube" };
-        }
-        
-        return item;
+        return item?.source ? item : { ...item, source: "youtube" };
       });
 
-      console.log("[Home] Итоговые плоские треки для плеера:", flattenedTracks);
-      
       setTracks(flattenedTracks);
       setViewTitle("Моё Избранное ⭐");
       setIsRecommendations(false);
-      setSelectedPlaylistId("favorites"); 
+      setSelectedPlaylistId("favorites");
     } catch (err) {
-      console.error("Ошибка загрузки избранного:", err);
+      console.error("[Home] Ошибка загрузки избранного:", err);
     }
   };
 
   const handleSelectPlaylist = async (playlistKey) => {
-    console.log("[Sidebar Click] Кликнули по:", playlistKey);
-    
     if (playlistKey.id === "recommendations") {
       await loadRecommendations();
     } else if (playlistKey.id === "favorites") {
@@ -103,13 +72,7 @@ export default function Home() {
     setTracks(Array.isArray(results) ? results : []);
     setViewTitle("Результаты поиска");
     setIsRecommendations(false);
-    setSelectedPlaylistId(null); 
-  };
-
-  const getRefreshHandler = () => {
-    if (isRecommendations) return loadRecommendations;
-    if (selectedPlaylistId === "favorites") return loadFavorites;
-    return null;
+    setSelectedPlaylistId(null);
   };
 
   const currentTrack = queue[currentIndex] || null;
@@ -126,17 +89,15 @@ export default function Home() {
 
       <div className="main-container">
         <Sidebar onSelectPlaylist={handleSelectPlaylist} />
-        
+
         <main className="content-area">
           <SearchBar onResults={handleSearchResults} />
-          
           <h2 className="view-title">{viewTitle}</h2>
-          
-          <PlaylistView 
-            tracks={tracks} 
-            playlistId={isRecommendations ? "recommendations" : selectedPlaylistId} 
-            onTracksUpdated={setTracks} 
-            onRefresh={getRefreshHandler()}
+          <PlaylistView
+            tracks={tracks}
+            playlistId={isRecommendations ? "recommendations" : selectedPlaylistId}
+            onTracksUpdated={setTracks}
+            onRefresh={isRecommendations ? loadRecommendations : (selectedPlaylistId === "favorites" ? loadFavorites : null)}
           />
         </main>
       </div>
