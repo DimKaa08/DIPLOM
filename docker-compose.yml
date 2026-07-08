@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 version: "3.9"
+=======
+name: diplom
+>>>>>>> 372f4b1 (Изменение 3)
 
 services:
 
@@ -29,8 +33,13 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
     volumes:
+<<<<<<< HEAD
       - .:/app                        # hot-reload при разработке
       - ml_models:/app/backend/ml    # веса модели между перезапусками
+=======
+      - .:/app
+      - ml_models:/app/backend/ml
+>>>>>>> 372f4b1 (Изменение 3)
     depends_on:
       redis:
         condition: service_healthy
@@ -52,13 +61,21 @@ services:
       - REDIS_URL=redis://redis:6379/0
     volumes:
       - .:/app
+<<<<<<< HEAD
       - ml_models:/app/backend/ml   # тот же том — воркер видит и пишет модель
+=======
+      - ml_models:/app/backend/ml
+>>>>>>> 372f4b1 (Изменение 3)
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
 
+<<<<<<< HEAD
   # ── Flower — веб-интерфейс мониторинга очереди (опционально) ─────────────
+=======
+  # ── Flower — мониторинг очереди Celery ────────────────────────────────────
+>>>>>>> 372f4b1 (Изменение 3)
   flower:
     build:
       context: .
@@ -77,6 +94,25 @@ services:
       - celery_worker
     restart: unless-stopped
 
+<<<<<<< HEAD
+=======
+  # ── React / Vite фронтенд ─────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+>>>>>>> 372f4b1 (Изменение 3)
 volumes:
   redis_data:
   ml_models:
