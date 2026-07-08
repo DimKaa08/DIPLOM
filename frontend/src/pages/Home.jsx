@@ -10,15 +10,6 @@ import PlaylistView from "../components/PlaylistView";
 import Player from "../components/Player/Player";
 
 export default function Home() {
-<<<<<<< HEAD
-  const { logout, user }          = useContext(AuthContext);
-  const { queue, currentIndex }   = useContext(PlayerContext);
-
-  const [tracks, setTracks]                       = useState([]);
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState("recommendations");
-  const [viewTitle, setViewTitle]                 = useState("Персональные рекомендации 🧠");
-  const [isRecommendations, setIsRecommendations] = useState(true);
-=======
   const { logout, user }        = useContext(AuthContext);
   const { queue, currentIndex } = useContext(PlayerContext);
 
@@ -26,22 +17,11 @@ export default function Home() {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState("recommendations");
   const [viewTitle, setViewTitle]                   = useState("Персональные рекомендации 🧠");
   const [isRecommendations, setIsRecommendations]   = useState(true);
->>>>>>> 372f4b1 (Изменение 3)
 
   useEffect(() => { loadRecommendations(); }, []);
 
   const loadRecommendations = async () => {
     try {
-<<<<<<< HEAD
-      // client.js добавляет baseURL и токен — никакого хардкода
-      const { data } = await client.get("/playlist/recommendations");
-      setTracks(data?.tracks && Array.isArray(data.tracks) ? data.tracks : []);
-      setViewTitle("Персональные рекомендации 🧠");
-      setIsRecommendations(true);
-      if (data?.id) setSelectedPlaylistId(data.id);
-    } catch (error) {
-      console.error("[Home] Ошибка загрузки рекомендаций:", error);
-=======
       // ИСПРАВЛЕНО: было /playlist/recommendations — возвращал случайные треки
       // с id = Integer (из БД). Теперь /recommendations — ML-эндпоинт,
       // возвращает треки с id = source_id (строка), совместимо с избранным.
@@ -63,7 +43,6 @@ export default function Home() {
       } catch (fallbackError) {
         console.error("[Home] Фолбек тоже упал:", fallbackError);
       }
->>>>>>> 372f4b1 (Изменение 3)
     }
   };
 
@@ -75,11 +54,6 @@ export default function Home() {
         ? responseData
         : (responseData?.tracks || responseData?.items || []);
 
-<<<<<<< HEAD
-      const flattenedTracks = rawTracks.map((item) => {
-        if (item?.track) {
-          return { ...item.track, source: item.track.source || "youtube", favorite_relation_id: item.id };
-=======
       // Нормализуем формат — у всех треков должен быть source
       const flattenedTracks = rawTracks.map((item) => {
         if (item?.track) {
@@ -88,7 +62,6 @@ export default function Home() {
             source: item.track.source || "youtube",
             favorite_relation_id: item.id,
           };
->>>>>>> 372f4b1 (Изменение 3)
         }
         return item?.source ? item : { ...item, source: "youtube" };
       });
@@ -115,11 +88,7 @@ export default function Home() {
 
   const handleSearchResults = (results) => {
     setTracks(Array.isArray(results) ? results : []);
-<<<<<<< HEAD
-    setViewTitle("Результаты поиска");
-=======
     setViewTitle("Результаты поиска 🔍");
->>>>>>> 372f4b1 (Изменение 3)
     setIsRecommendations(false);
     setSelectedPlaylistId(null);
   };
@@ -146,9 +115,6 @@ export default function Home() {
             tracks={tracks}
             playlistId={isRecommendations ? "recommendations" : selectedPlaylistId}
             onTracksUpdated={setTracks}
-<<<<<<< HEAD
-            onRefresh={isRecommendations ? loadRecommendations : (selectedPlaylistId === "favorites" ? loadFavorites : null)}
-=======
             onRefresh={
               isRecommendations
                 ? loadRecommendations
@@ -156,7 +122,6 @@ export default function Home() {
                 ? loadFavorites
                 : null
             }
->>>>>>> 372f4b1 (Изменение 3)
           />
         </main>
       </div>

@@ -32,11 +32,11 @@ export default function Player() {
       // client.js подставляет baseURL и токен автоматически
       await client.post("/activity/log", {
         track_id:        trackId,
-<<<<<<< HEAD
+
         listen_duration: Math.round(stats.listenDuration),
-=======
         listen_duration: parseInt(Math.round(stats.listenDuration), 10),
->>>>>>> 372f4b1 (Изменение 3)
+
+        listen_duration: parseInt(Math.round(stats.listenDuration), 10),
         completion_rate: parseFloat(stats.completionRate.toFixed(4)),
         is_finished:     stats.isFinished,
         is_looped:       stats.isLooped,
