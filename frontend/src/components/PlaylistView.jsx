@@ -1,151 +1,158 @@
+// frontend/src/components/PlaylistView.jsx
 import { useContext, useEffect, useState } from "react";
 import { PlayerContext } from "../context/PlayerContext";
 import { AuthContext } from "../context/AuthContext";
-
 import { addFavorite, removeFavorite, getFavorites } from "../api/favorites";
 import { removeTrackFromPlaylist } from "../api/playlist";
 import "./PlaylistView.css";
 
 export default function PlaylistView({ tracks, playlistId, onTracksUpdated, onRefresh }) {
-  const { playTrack, setQueue, favorites, toggleFavorite: contextToggleFavorite } = useContext(PlayerContext);
+  const { playTrack, setQueue, queue, currentIndex, isPlaying, favorites, toggleFavorite: ctxToggle } = useContext(PlayerContext);
   const { token } = useContext(AuthContext);
-
   const [favoriteIds, setFavoriteIds] = useState(new Set());
 
-  // Синхронизация сердечек
+  const currentTrackId = queue[currentIndex]?.id;
+
   useEffect(() => {
     if (!token) return;
-    getFavorites(token).then((tracks) => {
-      const ids = Array.isArray(tracks) ? tracks.map(t => t.id) : (tracks?.tracks?.map(t => t.id) || []);
+    getFavorites(token).then((data) => {
+      const ids = Array.isArray(data) ? data.map(t => t.id) : (data?.tracks?.map(t => t.id) || []);
       setFavoriteIds(new Set(ids));
     });
   }, [token]);
 
-  const handlePlay = (track, event) => {
-    if (event) event.stopPropagation(); 
+  const handlePlay = (track, e) => {
+    if (e) e.stopPropagation();
     setQueue(tracks);
-    playTrack(track, tracks); 
+    playTrack(track, tracks);
   };
 
-  const toggleFavorite = async (track) => {
+  const toggleFav = async (track) => {
     const isFav = favoriteIds.has(track.id);
-    const newSet = new Set(favoriteIds);
-
-    if (isFav) newSet.delete(track.id);
-    else newSet.add(track.id);
-
-    setFavoriteIds(newSet);
-
-    if (contextToggleFavorite) {
-      contextToggleFavorite(track);
-    }
-
+    const next  = new Set(favoriteIds);
+    isFav ? next.delete(track.id) : next.add(track.id);
+    setFavoriteIds(next);
+    if (ctxToggle) ctxToggle(track);
     try {
-      if (isFav) await removeFavorite(track.id, token);
-      else await addFavorite(track.id, token);
-    } catch (err) {
-      console.error("Не удалось обновить лайк", err);
+      isFav ? await removeFavorite(track.id, token) : await addFavorite(track, token);
+    } catch {
       setFavoriteIds(favoriteIds);
     }
   };
 
   const deleteTrack = async (track) => {
     if (!playlistId || playlistId === "recommendations") return;
-
     try {
-      if (playlistId === "favorites_fallback" || playlistId === "favorites") {
+      if (playlistId === "favorites") {
         await removeFavorite(track.id, token);
-        const newSet = new Set(favoriteIds);
-        newSet.delete(track.id);
-        setFavoriteIds(newSet);
-
-        const isStillInContextFav = favorites.some((t) => t.id === track.id);
-        if (isStillInContextFav && contextToggleFavorite) {
-          contextToggleFavorite(track);
-        }
+        const next = new Set(favoriteIds);
+        next.delete(track.id);
+        setFavoriteIds(next);
+        if (favorites.some(t => t.id === track.id) && ctxToggle) ctxToggle(track);
       } else {
         await removeTrackFromPlaylist(playlistId, track.id, token);
       }
-
-      const updated = tracks.filter((t) => t.id !== track.id);
-      onTracksUpdated(updated);
-
+      onTracksUpdated(tracks.filter(t => t.id !== track.id));
     } catch (err) {
       console.error("Ошибка при удалении трека:", err);
-      alert("Не удалось удалить трек с сервера.");
     }
   };
 
+  if (tracks.length === 0) {
+    return (
+      <div className="playlist-view">
+        <div className="empty-state">
+          <div className="empty-icon">♪</div>
+          <div className="empty-text">Нет треков</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="playlist-view">
-      
-      {/* Красивая шапка с кнопкой обновления */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <h2>Треки</h2>
-        {playlistId === "recommendations" && onRefresh && (
-          <button 
+      {/* Заголовок секции */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        {onRefresh && playlistId === "recommendations" && (
+          <button
             onClick={onRefresh}
             style={{
-              padding: "8px 16px",
-              backgroundColor: "#3b82f6",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
+              marginLeft: "auto",
+              padding: "6px 14px",
+              background: "var(--surface-1)",
+              border: "0.5px solid var(--border-2)",
+              borderRadius: "var(--radius-sm)",
+              color: "var(--text-2)",
+              fontSize: 12,
               cursor: "pointer",
-              fontWeight: "600",
-              transition: "background 0.2s"
+              fontFamily: "var(--sans)",
+              transition: "color .15s, border-color .15s",
             }}
-            onMouseOver={(e) => e.target.style.backgroundColor = "#2563eb"}
-            onMouseOut={(e) => e.target.style.backgroundColor = "#3b82f6"}
+            onMouseOver={e => { e.currentTarget.style.color = "var(--text-1)"; e.currentTarget.style.borderColor = "var(--text-3)"; }}
+            onMouseOut={e => { e.currentTarget.style.color = "var(--text-2)"; e.currentTarget.style.borderColor = "var(--border-2)"; }}
           >
-            🔄 Обновить рекомендации
+            ↺ Обновить
           </button>
         )}
       </div>
 
-      {tracks.length === 0 && <p style={{ opacity: 0.6 }}>Нет треков</p>}
-
       <div className="track-list">
-        {tracks.map((track, index) => { 
-          const isFav = favoriteIds.has(track.id);
+        {tracks.map((track, index) => {
+          const isFav     = favoriteIds.has(track.id);
+          const isPlaying = track.id === currentTrackId;
 
           return (
-            <div key={track.id || index} className="track-item">
-              
-              <div className="track-left" onClick={(e) => handlePlay(track, e)}>
-                <div className="track-title">{track.title}</div>
-                <div className="track-artist">{track.artist}</div>
+            <div
+              key={track.id || index}
+              className={`track-item${isPlaying ? " playing" : ""}`}
+              onClick={(e) => handlePlay(track, e)}
+            >
+              {/* Номер / иконка воспроизведения */}
+              <div className="track-num">{index + 1}</div>
+              <div className="track-play-icon">{isPlaying ? "▶" : "▶"}</div>
+
+              {/* Обложка */}
+              <div className="track-thumb">
+                {track.thumbnail_url
+                  ? <img src={track.thumbnail_url} alt="" />
+                  : <span style={{ fontSize: 16, opacity: 0.4 }}>♪</span>
+                }
               </div>
 
-              <div className="track-actions">
-                
+              {/* Название + артист */}
+              <div className="track-info">
+                <div className="track-title">{track.title || "Без названия"}</div>
+                <div className="track-artist">{track.artist || "Неизвестный артист"}</div>
+              </div>
+
+              {/* Действия */}
+              <div className="track-actions" onClick={e => e.stopPropagation()}>
                 <button
-                  className={`fav-btn ${isFav ? "fav" : ""}`}
-                  onClick={() => toggleFavorite(track)}
-                  style={{ background: "none", border: "none", cursor: "pointer", fontSize: "18px" }}
+                  className={`fav-btn${isFav ? " fav" : ""}`}
+                  onClick={() => toggleFav(track)}
+                  title={isFav ? "Убрать из избранного" : "Добавить в избранное"}
                 >
-                  {isFav ? "❤️" : "🤍"}
+                  {isFav ? "♥" : "♡"}
                 </button>
 
-                {/* Крестик скрывается, если это рекомендации */}
                 {playlistId && playlistId !== "recommendations" && (
                   <button
                     className="delete-btn"
                     onClick={() => deleteTrack(track)}
-                    title="Удалить трек"
+                    title="Удалить"
                   >
-                    ✖
+                    ✕
                   </button>
                 )}
 
                 <button
                   className="play-btn"
                   onClick={(e) => handlePlay(track, e)}
+                  title="Слушать"
                 >
                   ▶
                 </button>
               </div>
-
             </div>
           );
         })}

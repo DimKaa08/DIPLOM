@@ -15,19 +15,17 @@ python-dotenv==1.0.1
 
 # HTTP
 requests==2.32.3
+urllib3==2.2.3
 
 # Music sources
-yt-dlp==2024.9.27
+yt-dlp
 
-# ML
-torch==2.4.1
-# CPU-only версия — значительно легче для сервера без GPU.
-# Если есть GPU, замените на: torch==2.4.1+cu121
---extra-index-url https://download.pytorch.org/whl/cpu
+# ML — torch устанавливается отдельно в Dockerfile
+numpy==1.26.4
 
 # Celery + Redis
 celery==5.4.0
 redis==5.1.1
 
-# Celery web UI (опционально, для мониторинга очереди)
+# Celery web UI
 flower==2.0.1

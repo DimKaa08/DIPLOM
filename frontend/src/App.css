@@ -1,86 +1,177 @@
-/* Главный контейнер на весь экран */
+/* ── Layout ─────────────────────────────────────────────────────────────── */
 .app-layout {
   display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100vw;
-  background: #121212; /* Фирменный темный цвет */
-  color: white;
+  background: var(--bg);
+  color: var(--text-2);
   overflow: hidden;
 }
 
-/* Шапка проекта */
+/* ── Header ──────────────────────────────────────────────────────────────── */
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 30px;
-  background: #1a1a1a;
-  border-bottom: 1px solid #282828;
+  padding: 0 24px;
+  height: 56px;
+  background: var(--bg);
+  border-bottom: 0.5px solid var(--border);
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 .logo-section {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
 }
 
 .logo-section h1 {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-1);
+  letter-spacing: -0.3px;
   margin: 0;
-  font-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-section h1::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .user-badge {
-  font-size: 14px;
-  color: #b3b3b3;
-  background: #282828;
+  font-size: 12px;
+  color: var(--text-3);
+  background: var(--surface-1);
   padding: 4px 12px;
   border-radius: 20px;
+  border: 0.5px solid var(--border-2);
 }
 
 .logout-btn {
-  background: #e74c3c !important;
+  font-size: 12px;
+  color: var(--text-3);
+  background: transparent;
+  border: 0.5px solid var(--border-2);
+  padding: 5px 14px;
+  border-radius: var(--radius-sm);
+  transition: color .15s, border-color .15s;
 }
 
-/* Контейнер для сайдбара и контента */
+.logout-btn:hover {
+  color: var(--text-1);
+  border-color: var(--text-3);
+}
+
+/* ── Main container ───────────────────────────────────────────────────────── */
 .main-container {
   display: flex;
   flex: 1;
-  overflow: hidden; /* Важно, чтобы прокручивался только контент */
+  overflow: hidden;
 }
 
-/* Стилизуем боковую панель */
+/* ── Sidebar ──────────────────────────────────────────────────────────────── */
 .sidebar {
-  width: 240px;
-  background: #000000;
-  padding: 20px;
+  width: 200px !important;
+  background: var(--bg-deep) !important;
+  padding: 16px 12px !important;
+  border-right: 0.5px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  border-right: 1px solid #282828;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.sidebar h3 {
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  color: var(--text-4) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0 8px;
+  margin: 0 0 8px !important;
 }
 
 .playlist-item {
-  padding: 10px 12px;
-  border-radius: 6px;
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px !important;
+  border-radius: var(--radius-sm) !important;
   cursor: pointer;
-  transition: 0.2s;
-  color: #b3b3b3;
+  color: var(--text-3) !important;
+  font-size: 13px;
+  transition: background .12s, color .12s;
+  user-select: none;
 }
 
 .playlist-item:hover {
-  background: #282828;
-  color: white;
+  background: var(--surface-1) !important;
+  color: var(--text-1) !important;
 }
 
-/* Правая контентная область */
+.playlist-item.active {
+  background: var(--accent-dim) !important;
+  color: var(--accent) !important;
+}
+
+/* ── Content area ────────────────────────────────────────────────────────── */
 .content-area {
   flex: 1;
-  padding: 30px;
+  padding: 20px 24px 0;
   display: flex;
   flex-direction: column;
-  gap: 25px;
-  overflow-y: auto; /* Скролл только здесь */
-  background: linear-gradient(to bottom, #1e1e1e, #121212);
-  padding-bottom: 100px; /* Отступ внизу, чтобы плеер не перекрывал треки */
+  gap: 0;
+  overflow-y: auto;
+  background: var(--bg);
+  padding-bottom: 90px;
+}
+
+.view-title {
+  font-size: 18px !important;
+  font-weight: 500 !important;
+  color: var(--text-1) !important;
+  letter-spacing: -0.3px;
+  margin: 16px 0 8px !important;
+}
+
+/* ── Search ──────────────────────────────────────────────────────────────── */
+.search-wrapper,
+.search-bar {
+  position: relative;
+  width: 100%;
+}
+
+.search-bar input,
+.search-input {
+  width: 100%;
+  background: var(--surface-1);
+  border: 0.5px solid var(--border-2);
+  border-radius: var(--radius);
+  padding: 9px 14px 9px 38px;
+  color: var(--text-1);
+  font-size: 13px;
+  font-family: var(--sans);
+  outline: none;
+  transition: border-color .15s;
+}
+
+.search-bar input:focus,
+.search-input:focus {
+  border-color: var(--accent);
+}
+
+.search-bar input::placeholder,
+.search-input::placeholder {
+  color: var(--text-4);
 }

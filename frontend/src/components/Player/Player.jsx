@@ -1,5 +1,5 @@
 // frontend/src/components/Player/Player.jsx
-import { useContext, useEffect, useRef } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import client, { API_BASE } from "../../api/client";
 import { PlayerContext } from "../../context/PlayerContext";
 import "./Player.css";
@@ -15,27 +15,31 @@ export default function Player() {
 
   const track = queue[currentIndex] || null;
 
-  const lastLoadedTrackId = useRef(null);
-  const maxPositionRef    = useRef(0);
-  const durationRef       = useRef(0);
-  const isFinishedRef     = useRef(false);
-  const repeatRef         = useRef(repeat);
+  const lastLoadedId  = useRef(null);
+  const maxPosRef     = useRef(0);
+  const durationRef   = useRef(0);
+  const isFinishedRef = useRef(false);
+  const repeatRef     = useRef(repeat);
+
+  const [progress,  setProgress]  = useState(0);   // 0–100
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration,  setDuration]  = useState(0);
 
   useEffect(() => { repeatRef.current = repeat; }, [repeat]);
 
-  // Отправка метрик прослушивания на бэкенд для ML
-  const sendInteractionLog = async (trackId, stats) => {
+  const fmt = (s) => {
+    if (!s || isNaN(s)) return "0:00";
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60).toString().padStart(2, "0");
+    return `${m}:${sec}`;
+  };
+
+  const sendLog = async (trackId, stats) => {
     const token = localStorage.getItem("token");
     if (!token || !trackId) return;
-
     try {
-      // client.js подставляет baseURL и токен автоматически
       await client.post("/activity/log", {
         track_id:        trackId,
-
-        listen_duration: Math.round(stats.listenDuration),
-        listen_duration: parseInt(Math.round(stats.listenDuration), 10),
-
         listen_duration: parseInt(Math.round(stats.listenDuration), 10),
         completion_rate: parseFloat(stats.completionRate.toFixed(4)),
         is_finished:     stats.isFinished,
@@ -45,129 +49,163 @@ export default function Player() {
         skip_type:       stats.skipType,
       });
     } catch (err) {
-      console.error("[AI Logger] Ошибка отправки метрик:", err);
+      console.error("[AI Logger]", err);
     }
   };
 
-  // Логирование при смене трека
   useEffect(() => {
     if (!track) return;
-    const currentTrackId = track.id;
-
+    const id = track.id;
     return () => {
-      if (!currentTrackId) return;
-
-      const duration       = durationRef.current || 1;
-      const skipPos        = maxPositionRef.current;
-      const isFinished     = isFinishedRef.current;
-      const wasSkipped     = !isFinished;
-      const completionRate = Math.min(skipPos / duration, 1.0);
-
-      let skipType = "none";
-      if (wasSkipped) {
-        skipType = skipPos < 10 ? "immediate" : "partial";
-      }
-
-      sendInteractionLog(currentTrackId, {
-        listenDuration: skipPos,
-        completionRate,
-        isFinished,
-        isLooped:    repeatRef.current === "one",
-        wasSkipped,
-        skipPosition: skipPos,
-        skipType,
+      if (!id) return;
+      const dur      = durationRef.current || 1;
+      const pos      = maxPosRef.current;
+      const finished = isFinishedRef.current;
+      sendLog(id, {
+        listenDuration: pos,
+        completionRate: Math.min(pos / dur, 1.0),
+        isFinished:     finished,
+        isLooped:       repeatRef.current === "one",
+        wasSkipped:     !finished,
+        skipPosition:   pos,
+        skipType:       !finished ? (pos < 10 ? "immediate" : "partial") : "none",
       });
-
-      maxPositionRef.current = 0;
-      durationRef.current    = 0;
-      isFinishedRef.current  = false;
+      maxPosRef.current     = 0;
+      durationRef.current   = 0;
+      isFinishedRef.current = false;
     };
   }, [track?.id]);
 
-  // Управление воспроизведением
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-
-    if (!track) {
-      audio.pause();
-      audio.src = "";
-      lastLoadedTrackId.current = null;
-      return;
-    }
+    if (!track) { audio.pause(); audio.src = ""; lastLoadedId.current = null; return; }
 
     const params = new URLSearchParams({
       source: track.source || "youtube",
       title:  track.title  || "",
       artist: track.artist || "",
     });
+    const src = `${API_BASE}/stream/${encodeURIComponent(track.id)}?${params}`;
 
-    // API_BASE из client.js — единственное место хранения URL сервера
-    const targetSrc = `${API_BASE}/stream/${encodeURIComponent(track.id)}?${params}`;
-
-    if (lastLoadedTrackId.current !== track.id) {
-      audio.src = targetSrc;
+    if (lastLoadedId.current !== track.id) {
+      audio.src = src;
       audio.load();
-      lastLoadedTrackId.current = track.id;
+      lastLoadedId.current = track.id;
     }
 
-    if (isPlaying) {
-      audio.play().catch((err) => {
-        if (err.name !== "AbortError") {
-          console.error("[Player] Ошибка воспроизведения:", err);
-        }
-      });
-    } else {
-      audio.pause();
-    }
+    isPlaying
+      ? audio.play().catch(e => { if (e.name !== "AbortError") console.error(e); })
+      : audio.pause();
   }, [track, isPlaying, audioRef]);
+
+  const seekTo = (e) => {
+    const audio = audioRef.current;
+    if (!audio || !durationRef.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    audio.currentTime = ratio * durationRef.current;
+  };
+
+  if (!track) return (
+    <audio
+      ref={audioRef}
+      onEnded={() => { isFinishedRef.current = true; nextTrack(); }}
+      onLoadedMetadata={e => { durationRef.current = e.target.duration; setDuration(e.target.duration); }}
+      onTimeUpdate={e => {
+        const t = e.target.currentTime;
+        if (t > maxPosRef.current) maxPosRef.current = t;
+        setCurrentTime(t);
+        setProgress(durationRef.current ? (t / durationRef.current) * 100 : 0);
+      }}
+    />
+  );
 
   return (
     <>
       <audio
         ref={audioRef}
         onEnded={() => { isFinishedRef.current = true; nextTrack(); }}
-        onLoadedMetadata={(e) => { durationRef.current = e.target.duration; }}
-        onTimeUpdate={(e) => {
-          if (e.target.currentTime > maxPositionRef.current) {
-            maxPositionRef.current = e.target.currentTime;
-          }
+        onLoadedMetadata={e => { durationRef.current = e.target.duration; setDuration(e.target.duration); }}
+        onTimeUpdate={e => {
+          const t = e.target.currentTime;
+          if (t > maxPosRef.current) maxPosRef.current = t;
+          setCurrentTime(t);
+          setProgress(durationRef.current ? (t / durationRef.current) * 100 : 0);
         }}
       />
 
-      {track && (
-        <div className="player">
-          <div className="player-info">
-            <div className="player-title">{track.title   || "Без названия"}</div>
-            <div className="player-artist">{track.artist || "Неизвестный исполнитель"}</div>
+      <div className="player">
+
+        {/* ── Левая: обложка + инфо ── */}
+        <div className="player-info">
+          <div className="player-thumb">
+            {track.thumbnail_url
+              ? <img src={track.thumbnail_url} alt="" />
+              : <span style={{ fontSize: 20, opacity: 0.4 }}>♪</span>
+            }
           </div>
-
-          <div className="player-controls">
-            <button onClick={prevTrack} className="control-btn">⏮</button>
-
-            <button className="play-pause-btn" onClick={() => setIsPlaying(!isPlaying)}>
-              {isPlaying ? "⏸ Пауза" : "▶️ Играть"}
-            </button>
-
-            <button onClick={nextTrack} className="control-btn">⏭</button>
-
-            <button
-              onClick={() => setShuffle(!shuffle)}
-              className={`control-btn ${shuffle ? "active" : ""}`}
-              style={{ opacity: shuffle ? 1 : 0.5 }}
-            >
-              🔀
-            </button>
-
-            <button
-              onClick={() => setRepeat(repeat === "none" ? "all" : repeat === "all" ? "one" : "none")}
-              className="control-btn"
-            >
-              🔁 {repeat === "one" ? "①" : repeat === "all" ? "🔂" : ""}
-            </button>
+          <div className="player-text">
+            <div className="player-title">{track.title  || "Без названия"}</div>
+            <div className="player-artist">{track.artist || "Неизвестный артист"}</div>
           </div>
         </div>
-      )}
+
+        {/* ── Центр: кнопки + прогресс ── */}
+        <div className="player-center">
+          <div className="player-controls">
+            <button
+              className={`control-btn${shuffle ? " active" : ""}`}
+              onClick={() => setShuffle(!shuffle)}
+              title="Перемешать"
+            >
+              ⇄
+            </button>
+
+            <button className="control-btn" onClick={prevTrack} title="Предыдущий">
+              ⏮
+            </button>
+
+            <button
+              className="play-pause-btn"
+              onClick={() => setIsPlaying(!isPlaying)}
+              title={isPlaying ? "Пауза" : "Играть"}
+            >
+              {isPlaying ? "⏸" : "▶"}
+            </button>
+
+            <button className="control-btn" onClick={nextTrack} title="Следующий">
+              ⏭
+            </button>
+
+            <button
+              className={`control-btn${repeat !== "none" ? " active" : ""}`}
+              onClick={() => setRepeat(repeat === "none" ? "all" : repeat === "all" ? "one" : "none")}
+              title="Повтор"
+            >
+              {repeat === "one" ? "↺¹" : "↺"}
+            </button>
+          </div>
+
+          {/* Прогресс-бар */}
+          <div className="player-progress">
+            <span className="progress-time">{fmt(currentTime)}</span>
+            <div className="progress-track" onClick={seekTo}>
+              <div className="progress-fill" style={{ width: `${progress}%` }} />
+            </div>
+            <span className="progress-time right">{fmt(duration)}</span>
+          </div>
+        </div>
+
+        {/* ── Правая: громкость ── */}
+        <div className="player-right">
+          <span className="volume-icon">♪</span>
+          <div className="volume-track">
+            <div className="volume-fill" />
+          </div>
+        </div>
+
+      </div>
     </>
   );
 }
