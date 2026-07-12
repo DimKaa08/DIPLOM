@@ -16,6 +16,7 @@ python-dotenv==1.0.1
 # HTTP
 requests==2.32.3
 urllib3==2.2.3
+python-multipart==0.0.9
 
 # Music sources
 yt-dlp

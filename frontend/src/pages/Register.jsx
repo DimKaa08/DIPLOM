@@ -1,22 +1,29 @@
+// frontend/src/pages/Register.jsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { register } from "../api/auth";
 
 export default function Register() {
-  const [email, setEmail] = useState("");
+  const navigate = useNavigate();
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error,    setError]    = useState("");
+  const [loading,  setLoading]  = useState(false);
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
-
+    setLoading(true);
     try {
-      await register(email, password);
-      setSuccess("Регистрация успешна! Теперь войдите.");
+      const { data } = await register(email, password);
+      // Помечаем что новый пользователь — нужно показать онбординг после входа
+      localStorage.setItem("show_onboarding", "true");
+      // Переходим на логин с подсказкой
+      navigate("/login", { state: { message: "Аккаунт создан! Войди чтобы начать." } });
     } catch (err) {
       setError("Ошибка: возможно, email уже зарегистрирован");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -32,7 +39,6 @@ export default function Register() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-
         <input
           type="password"
           placeholder="Пароль"
@@ -42,9 +48,10 @@ export default function Register() {
         />
 
         {error && <div className="auth-error">{error}</div>}
-        {success && <div className="auth-success">{success}</div>}
 
-        <button type="submit">Создать аккаунт</button>
+        <button type="submit" disabled={loading}>
+          {loading ? "Создаю аккаунт..." : "Создать аккаунт"}
+        </button>
       </form>
 
       <p>

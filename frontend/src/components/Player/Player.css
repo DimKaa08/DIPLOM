@@ -170,11 +170,11 @@
 }
 
 .volume-track {
+  position: relative;
   width: 64px;
   height: 3px;
   background: var(--surface-3);
   border-radius: 2px;
-  overflow: hidden;
   cursor: pointer;
 }
 

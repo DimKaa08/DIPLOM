@@ -113,29 +113,41 @@ def _discover_new_tracks(db, preferred_artists, preferred_genres, limit=10, cook
 
 
 def _db_personalized_fallback(db, user_id, limit, blacklisted_ids, preferred_artists, preferred_genres):
+    """
+    Рекомендации из БД на основе ТОЛЬКО истории текущего пользователя.
+    ИСПРАВЛЕНО: раньше использовались avg_scores от ВСЕХ пользователей,
+    из-за чего новый пользователь получал треки, которые лайкал предыдущий.
+    Теперь скоринг основан только на взаимодействиях текущего user_id.
+    """
+    # Треки которые текущий пользователь скипнул
     skipped_ids = {i.track_id for i in db.query(models.UserInteraction)
         .filter(models.UserInteraction.user_id == user_id,
                 models.UserInteraction.engagement_score <= 0.0).all()}
-    liked_ids   = {i.track_id for i in db.query(models.UserInteraction)
-        .filter(models.UserInteraction.user_id == user_id,
-                models.UserInteraction.engagement_score > 0.5).all()}
-    avg_scores  = {row[0]: float(row[1]) for row in
-        db.query(models.UserInteraction.track_id, func.avg(models.UserInteraction.engagement_score))
-        .group_by(models.UserInteraction.track_id).all()}
-    all_tracks  = db.query(models.Track).filter(
+
+    # Треки с позитивным откликом от ТЕКУЩЕГО пользователя
+    user_scores = {i.track_id: float(i.engagement_score) for i in
+        db.query(models.UserInteraction)
+        .filter(models.UserInteraction.user_id == user_id).all()}
+
+    all_tracks = db.query(models.Track).filter(
         models.Track.source_id.isnot(None),
         ~models.Track.source_id.in_(blacklisted_ids),
         ~models.Track.id.in_(skipped_ids),
     ).all()
 
+    if not all_tracks:
+        return []
+
     scored = []
     for track in all_tracks:
-        score  = avg_scores.get(track.id, 0.3)
-        if track.id in liked_ids:                 score += 0.5
-        if track.artist in preferred_artists:     score += preferred_artists[track.artist] * 0.3
-        if track.genre  in preferred_genres:      score += preferred_genres[track.genre]   * 0.2
+        # Базовый скор — только из истории ЭТОГО пользователя (не других)
+        base  = user_scores.get(track.id, 0.0)
+        score = base
+        if track.artist in preferred_artists:  score += preferred_artists[track.artist] * 0.3
+        if track.genre  in preferred_genres:   score += preferred_genres[track.genre]   * 0.2
         scored.append((track, score))
 
+    # Шаффл среди треков с одинаковым скором (разнообразие)
     random.shuffle(scored)
     scored.sort(key=lambda x: x[1], reverse=True)
     return [
